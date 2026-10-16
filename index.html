@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#15153a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Солнце и Луна</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--sun:#ffc24a;--sun2:#ff9a2e;--moon:#b4c2ff;--moon2:#7d6cf0;--ink:#f4f1ff;--bg:#15153a;--panel:rgba(24,22,60,.78)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;font-family:Nunito,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink)}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+button{font:inherit;color:inherit;cursor:pointer}
+.hidden{display:none!important}
+
+/* top bar */
+#bar{position:fixed;top:calc(6px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:999px;background:rgba(20,18,50,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:5;box-shadow:0 4px 18px rgba(0,0,0,.25)}
+#bar button{width:32px;height:32px;border:0;border-radius:50%;background:rgba(255,255,255,.1);font-size:16px;line-height:32px;padding:0}
+#bar button:hover{background:rgba(255,255,255,.2)}
+#bar button.off{opacity:.45}
+#lvlName{font-weight:800;font-size:14px;padding:0 8px;white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
+
+/* hint */
+#hint{position:fixed;left:50%;bottom:calc(10px + env(safe-area-inset-bottom));transform:translateX(-50%);max-width:min(640px,calc(100vw - 340px));min-width:220px;padding:8px 16px;border-radius:16px;background:rgba(20,18,50,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);font-size:14px;font-weight:600;line-height:1.35;text-align:center;z-index:4;transition:opacity .8s;pointer-events:auto}
+#hint.fade{opacity:0;pointer-events:none}
+body:not(.touch) #hint{max-width:min(680px,90vw)}
+body.touch #hint{font-size:12px;padding:6px 12px;max-width:calc(100vw - 300px)}
+
+/* screens */
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:10;padding:12px;background:radial-gradient(ellipse at center,rgba(15,12,40,.15),rgba(10,8,30,.55))}
+.card{background:var(--panel);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:28px;padding:22px 26px;max-width:760px;width:100%;max-height:100%;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.08);text-align:center;touch-action:pan-y}
+.card.small{max-width:420px}
+h1{margin:4px 0 0;font-size:clamp(28px,5vw,44px);font-weight:900;letter-spacing:.5px;background:linear-gradient(90deg,#ffd76e,#ff9f45 35%,#c6b8ff 65%,#8fa6ff);-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{margin:0 0 8px;font-size:28px;font-weight:900}
+.sub{margin:4px 0 16px;opacity:.8;font-weight:600}
+.logo{display:flex;justify-content:center;gap:14px;height:46px;align-items:center}
+.logo i{display:block;width:40px;height:40px;border-radius:50%}
+.logo .ls{background:radial-gradient(circle at 38% 35%,#fff8c8,#ffc848 55%,#ff9a2e);box-shadow:0 0 24px 6px rgba(255,190,70,.55);animation:bob 3s ease-in-out infinite}
+.logo .lm{background:radial-gradient(circle at 38% 35%,#ffffff,#d3dcff 55%,#9aaaf0);box-shadow:0 0 24px 6px rgba(150,170,255,.5);animation:bob 3s ease-in-out infinite -1.5s}
+@keyframes bob{50%{transform:translateY(-6px)}}
+#levels{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:6px 0 14px}
+.lv{position:relative;border:0;border-radius:18px;padding:10px 4px 8px;background:linear-gradient(160deg,rgba(255,214,120,.18),rgba(140,150,255,.18));box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);transition:transform .15s,background .15s}
+.lv:hover:not(:disabled){transform:translateY(-2px);background:linear-gradient(160deg,rgba(255,214,120,.3),rgba(140,150,255,.3))}
+.lv b{display:block;font-size:22px;font-weight:900}
+.lv>span{display:block;font-size:11px;opacity:.8;min-height:2.6em;line-height:1.3;padding:0 2px}
+.lv em{font-style:normal;font-size:14px;letter-spacing:1px;color:#ffd76e}
+.lv em .e{color:rgba(255,255,255,.22)}
+.lv:disabled{opacity:.38;cursor:default}
+.help{font-size:13px;opacity:.85;line-height:1.5}
+.help kbd{display:inline-block;min-width:20px;padding:0 5px;border-radius:6px;background:rgba(255,255,255,.14);font-family:inherit;font-weight:800}
+.bigstars{font-size:46px;letter-spacing:6px;margin:4px 0;color:#ffd76e;text-shadow:0 0 18px rgba(255,200,80,.6)}
+.bigstars .e{color:rgba(255,255,255,.18);text-shadow:none}
+.btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+.btns button{border:0;border-radius:999px;padding:10px 18px;font-weight:800;background:rgba(255,255,255,.12)}
+.btns button.primary{background:linear-gradient(90deg,#ffc24a,#ff9a2e);color:#3a2200}
+.btns button:hover{filter:brightness(1.1)}
+
+/* toast */
+#toast{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%) scale(.9);padding:12px 22px;border-radius:999px;background:rgba(20,18,50,.82);font-weight:800;font-size:20px;z-index:6;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+
+/* touch pads */
+#pads{position:fixed;inset:0;pointer-events:none;display:none;z-index:3}
+body.touch.playing #pads{display:block}
+.pad{position:absolute;bottom:calc(8px + env(safe-area-inset-bottom));width:124px;height:124px}
+.pad.l{left:calc(8px + env(safe-area-inset-left))}
+.pad.r{right:calc(8px + env(safe-area-inset-right))}
+.tb{position:absolute;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;pointer-events:auto;touch-action:none;transition:transform .06s,background .1s;backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.tb.sun{background:rgba(255,196,80,.22);box-shadow:inset 0 0 0 2px rgba(255,205,110,.55);color:#ffe6a6}
+.tb.moon{background:rgba(160,175,255,.2);box-shadow:inset 0 0 0 2px rgba(175,185,255,.55);color:#dfe4ff}
+.tb.on{transform:scale(.9)}
+.tb.sun.on{background:rgba(255,196,80,.55)}
+.tb.moon.on{background:rgba(160,175,255,.5)}
+#pads.noab .tb[data-k$="A"]{display:none}
+
+#rotate{position:fixed;inset:0;z-index:50;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-weight:800;font-size:20px;padding:20px}
+#rotate div{font-size:64px;animation:spin 2.4s ease-in-out infinite}
+@keyframes spin{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
+@media (orientation:portrait){body.touch #rotate{display:flex}}
+@media (max-height:420px){.card{padding:12px 16px;border-radius:20px}.logo{height:30px}.logo i{width:26px;height:26px}h1{font-size:26px}.sub{margin:2px 0 8px;font-size:13px}#levels{gap:6px;margin:4px 0 8px}.lv{padding:5px 2px 4px;border-radius:12px}.lv b{font-size:17px}.lv span{font-size:10px;min-height:2.4em}.help{font-size:11px}.bigstars{font-size:34px}h2{font-size:22px}}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="bar" class="hidden">
+  <button id="bMenu" title="Меню (Esc)" aria-label="Меню">☰</button>
+  <span id="lvlName"></span>
+  <button id="bHint" title="Подсказка" aria-label="Подсказка">?</button>
+  <button id="bRestart" title="Заново (R)" aria-label="Заново">↻</button>
+  <button id="bSound" title="Звук" aria-label="Звук">♪</button>
+</div>
+<div id="hint" class="fade"></div>
+
+<div id="pads">
+  <div class="pad l">
+    <div class="tb sun" data-k="sA" style="left:0;top:0">✦</div>
+    <div class="tb sun" data-k="sJ" style="left:66px;top:0">▲</div>
+    <div class="tb sun" data-k="sL" style="left:0;top:66px">◀</div>
+    <div class="tb sun" data-k="sR" style="left:66px;top:66px">▶</div>
+  </div>
+  <div class="pad r">
+    <div class="tb moon" data-k="mJ" style="left:0;top:0">▲</div>
+    <div class="tb moon" data-k="mA" style="left:66px;top:0">✦</div>
+    <div class="tb moon" data-k="mL" style="left:0;top:66px">◀</div>
+    <div class="tb moon" data-k="mR" style="left:66px;top:66px">▶</div>
+  </div>
+</div>
+
+<div id="menu" class="screen">
+  <div class="card">
+    <div class="logo"><i class="ls"></i><i class="lm"></i></div>
+    <h1>Солнце и Луна</h1>
+    <p class="sub">Кооперативный платформер для двоих</p>
+    <div id="levels"></div>
+    <div class="help" id="help"></div>
+  </div>
+</div>
+
+<div id="win" class="screen hidden">
+  <div class="card small">
+    <h2 id="winTitle">Уровень пройден!</h2>
+    <div id="winStars" class="bigstars"></div>
+    <p id="winInfo"></p>
+    <div class="btns">
+      <button id="wNext" class="primary">Дальше</button>
+      <button id="wAgain">Ещё раз</button>
+      <button id="wMenu">Меню</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="rotate"><div>📱</div><p>Поверните телефон горизонтально</p></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ================= constants ================= */
+const T = 30, COLS = 32, ROWS = 18, W = COLS * T, H = ROWS * T;
+const SPEED = 200, ACC = 2600, AIR_ACC = 1800, GRAV = 1500, JUMP_V = 580, MAX_FALL = 720;
+const COYOTE = 0.1, BUFFER = 0.13;
+const DRAIN = 1 / 3, REGEN = 0.9;          // energy per second
+const ECLIPSE_DIST = 92;                    // px between centers
+const AB_R = 95, AB_DUR = 3, AB_CD = 6;     // own light / darkness
+const STEP = 1 / 120;
+const DAY = [168, 214, 250], NIGHT = [26, 27, 68];
+const LAMP_C = '#ffe3a1', FLARE_C = '#ffefb4', CLOUD_C = '#3a3f6f', SHADE_C = '#22184c';
+const LINK_C = { a: '#ff8fb1', b: '#6fe0bf', L: '#ffd36b', C: '#a9b4e6' };
+
+/* ================= levels =================
+   #  обычный блок        +  светлая платформа (только Солнце)   x  тёмная платформа (только Луна)
+   1  Солнце   2  Луна    A  дверь Солнца    B  дверь Луны      r  луч    s  звезда
+   zones: [x, y, w, h, 1 = свет / -1 = тьма] — более поздние перекрывают ранние            */
+const E = '................................';
+const LEVELS = [
+{
+  name: 'Первый рассвет',
+  hint: 'Солнце: {SM} и прыжок {SJ}. Луна: {MM} и прыжок {MJ}. Солнце сильно на свету, Луна — во тьме: в чужой зоне герой гаснет. Доведите обоих до своих дверей!',
+  ambient: 1,
+  zones: [[0,0,16,18,1],[16,0,16,18,-1],[0,8,6,7,-1],[26,8,6,7,1]],
+  map: [E,E,E,E,E,E,E,E,E,E,E,E,E,
+    '.B............................A.',
+    '###..........................###',
+    '......###..............###......',
+    '..1.........................2...',
+    '################################'],
+},
+{
+  name: 'Свои тропы',
+  hint: 'Золотые платформы держат только Солнце, сиреневые — только Луну.',
+  ambient: 1,
+  zones: [[0,0,12,18,-1]],
+  map: [E,E,
+    '.B............................A.',
+    '####........................####',
+    E,
+    '.......xxx............+++.......',
+    E,E,
+    '...xxx....................+++...',
+    E,E,
+    '.......xxx............+++.......',
+    E,E,
+    '...xxx....................+++...',
+    E,
+    '.........2......1...............',
+    '################################'],
+},
+{
+  name: 'Лучи и звёзды',
+  hint: 'Солнце собирает лучи, Луна — звёзды. Соберите всё, чтобы получить три звезды.',
+  ambient: 1,
+  zones: [[0,0,32,9,1],[0,9,32,9,-1]],
+  map: [E,E,E,
+    '...........r................r...',
+    E,
+    '..........+++..............+++..',
+    '.......r................r.......',
+    '.1s...........................A.',
+    '######...#####....#####...######',
+    '...............r................',
+    '..............+++...............',
+    '.......xx.......................',
+    '.....s..........................',
+    '..........s..........s...s......',
+    '.....xx.........................',
+    '.........................xx.....',
+    '.2............................B.',
+    '#########...########...#########'],
+},
+{
+  name: 'Рука помощи',
+  hint: 'Кнопка открывает дверь своего цвета, пока на ней кто-то стоит. Откройте путь напарнику!',
+  ambient: 1,
+  zones: [[0,0,16,18,1],[16,0,16,18,-1]],
+  buttons: [{x:20,y:13,link:'a'},{x:4,y:16,link:'b'}],
+  gates: [{x:7,y:13,w:1,h:4,link:'a'},{x:24,y:13,w:1,h:4,link:'b'}],
+  map: [E,E,E,E,E,E,E,E,E,E,
+    '....................s...........',
+    '..r..r.....r...............s..s.',
+    '########................########',
+    E,
+    '..........+++......xxx..........',
+    E,
+    '.A..........1.....2...........B.',
+    '################################'],
+},
+{
+  name: 'Затмение',
+  hint: 'Затмение: когда вы рядом, вокруг вас нейтральная зона — в ней безопасно обоим. Идите вместе!',
+  eclipse: true, ambient: 1,
+  zones: [[0,0,32,8,1],[0,8,32,5,-1],[0,13,32,5,1],[0,13,2,4,-1]],
+  map: [E,E,E,E,
+    '...........r..........s.........',
+    E,
+    '........#...........#.......B.A.',
+    '....############################',
+    E,
+    '.##........s...........s........',
+    '..............r.................',
+    '...........#...........#........',
+    '############################....',
+    E,
+    '.........r...........r.......##.',
+    '...............s................',
+    '.2.1.....#...........#..........',
+    '################################'],
+},
+{
+  name: 'Фонари и тучи',
+  hint: 'Рычаги зажигают фонари и нагоняют тучи. Луна может зажечь путь для Солнца, а Солнце — укрыть Луну тучей.',
+  eclipse: true, ambient: 1,
+  zones: [[0,0,16,18,-1]],
+  levers: [{x:1,y:11,link:'L'},{x:31,y:11,link:'C'}],
+  lamps: [{x:14,y:12.5,r:5.5,link:'L'},{x:9,y:9,r:5.5,link:'L'},{x:4,y:4,r:5.5,link:'L'}],
+  clouds: [{x:17,y:0,w:15,h:16,link:'C'}],
+  map: [E,E,
+    '.A............................B.',
+    '###...r..................s...###',
+    E,
+    '.....++++..............xxxx.....',
+    '............r......s............',
+    E,
+    '..........++++....xxxx..........',
+    '.......r................s.......',
+    E,
+    '.....++++..............xxxx.....',
+    '.xx........r........s.........++',
+    E,
+    '..........++++....xxxx..........',
+    '.....xx....................++...',
+    '...2.............1..............',
+    '################################'],
+},
+{
+  name: 'Свой свет',
+  hint: 'Солнце ({SA}) может осветить участок вокруг себя, Луна ({MA}) — затемнить. После этого нужна перезарядка.',
+  eclipse: true, ability: true, ambient: 1,
+  zones: [[0,0,32,9,1],[0,9,32,9,-1],[0,0,3,9,-1],[29,0,3,9,-1],[0,10,3,8,1],[29,10,3,8,1]],
+  map: [E,E,E,E,E,
+    '..........s.........s...........',
+    E,
+    '..........#.........#...........',
+    '.2........#....s....#.........B.',
+    '################################',
+    E,E,E,
+    '.........r......r......r........',
+    E,
+    '.........#......#......#........',
+    '.1.......#......#......#......A.',
+    '################################'],
+},
+{
+  name: 'День и ночь',
+  hint: 'Сутки сменяются! Днём Луне нужна тень, ночью Солнцу — сияние. Пережидайте в укрытиях и двигайтесь в своё время.',
+  eclipse: true, ability: true, ambient: 1, cycle: { day: 6, night: 6 },
+  zones: [[0,0,4,9,1],[13,0,3,9,1],[28,0,4,9,1],[0,9,4,9,-1],[14,9,3,9,-1],[28,9,4,9,-1]],
+  map: [E,E,
+    '......r.......r......r..........',
+    '..........r.....................',
+    E,
+    '.1............................A.',
+    '+++++..++++++..+++++..+++++.++++',
+    E,E,E,E,E,
+    '.........................s......',
+    '.........s.....s.....s..........',
+    '.........................xx.....',
+    E,
+    '.2.............#..............B.',
+    '########...#########...#########'],
+},
+{
+  name: 'Мост через бездну',
+  hint: 'Всё вместе: кнопки держат мост, рычаги управляют фонарями и тучей. Не забывайте про затмение и свой свет.',
+  eclipse: true, ability: true, ambient: -1,
+  zones: [[0,0,12,18,1],[20,0,12,18,-1]],
+  buttons: [{x:10,y:16,link:'a'},{x:21,y:16,link:'a'}],
+  bridges: [{x:12,y:17,w:8,h:1,link:'a'}],
+  levers: [{x:1,y:13,link:'C'},{x:30,y:13,link:'L'}],
+  lamps: [{x:26,y:12.5,r:5.5,link:'L'},{x:27,y:6.5,r:5.5,link:'L'}],
+  clouds: [{x:0,y:0,w:12,h:15,link:'C'}],
+  map: [E,E,E,E,
+    '.B............................A.',
+    '####....s..............r....####',
+    E,E,
+    '..s...xxxx............++++..r...',
+    E,E,
+    '.xxxx..s...............r...++++.',
+    E,
+    '...............sr...............',
+    '.++...xxxx............++++...xx.',
+    E,
+    '...1........................2...',
+    '############........############'],
+},
+{
+  name: 'Великое затмение',
+  hint: 'Финал: сутки сменяются, дверь держит кнопка. Двигайтесь вместе, а поодиночке выручайте друг друга своим светом.',
+  eclipse: true, ability: true, ambient: 1, cycle: { day: 7, night: 7 },
+  zones: [[13,8,3,4,-1],[27,2,5,5,-1]],
+  buttons: [{x:12,y:16,link:'a'},{x:20,y:16,link:'a'}],
+  gates: [{x:16,y:13,w:1,h:4,link:'a'}],
+  lamps: [{x:24,y:10,r:2.2},{x:13,y:4.5,r:2.3}],
+  map: [E,E,E,
+    '........s............r..........',
+    E,E,
+    '........#....A...r...#...s...B..',
+    '....############################',
+    E,
+    '.##.....r...........s...........',
+    '..............r.................',
+    '........#...........#...........',
+    '############################....',
+    E,
+    '........r...............s....##.',
+    E,
+    '.1.2............................',
+    '################################'],
+},
+];
+
+/* ================= DOM / canvas ================= */
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const lc = document.createElement('canvas'); lc.width = 160; lc.height = 90;
+const lctx = lc.getContext('2d');
+const tilesCv = document.createElement('canvas'); tilesCv.width = W * 2; tilesCv.height = H * 2;
+let sc = 1, ox = 0, oy = 0, dpr = 1;
+
+const params = new URLSearchParams(location.search);
+let isTouch = matchMedia('(pointer: coarse)').matches;
+function setTouch(v) { isTouch = v; document.body.classList.toggle('touch', v); buildHelp(); resize(); if (lvl && state !== 'menu') showHint(); }
+
+function resize() {
+  dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr);
+  // на сенсорных экранах оставляем по бокам место под кнопки
+  const side = isTouch ? Math.min(118, innerWidth * 0.14) * dpr : 0;
+  sc = Math.min((cv.width - 2 * side) / W, cv.height / H);
+  ox = (cv.width - W * sc) / 2; oy = (cv.height - H * sc) / 2;
+}
+addEventListener('resize', resize); resize();
+
+/* ================= save ================= */
+let save = { unlocked: 1, stars: [] };
+try { const s = JSON.parse(localStorage.getItem('sun-moon.v1')); if (s) save = Object.assign(save, s); } catch (e) {}
+if (params.has('all')) save.unlocked = LEVELS.length;
+function persist() { try { localStorage.setItem('sun-moon.v1', JSON.stringify(save)); } catch (e) {} }
+
+/* ================= sound ================= */
+let ac = null, muted = false;
+try { muted = localStorage.getItem('sun-moon.mute') === '1'; } catch (e) {}
+function audioInit() {
+  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } }
+  if (ac && ac.state === 'suspended') ac.resume();
+}
+function tone(f, d = 0.15, type = 'sine', v = 0.07, f2 = 0, delay = 0) {
+  if (!ac || muted) return;
+  const t = ac.currentTime + delay, o = ac.createOscillator(), g = ac.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + d + 0.03);
+}
+const sfx = {
+  jump: k => tone(k === 'sun' ? 420 : 330, 0.14, 'sine', 0.05, k === 'sun' ? 640 : 520),
+  ray: () => { tone(880, 0.12, 'triangle', 0.06); tone(1320, 0.18, 'triangle', 0.05, 0, 0.07); },
+  star: () => { tone(988, 0.12, 'sine', 0.06); tone(1480, 0.2, 'sine', 0.05, 0, 0.07); },
+  lever: () => { tone(220, 0.08, 'square', 0.03); tone(330, 0.12, 'triangle', 0.05, 0, 0.05); },
+  button: () => tone(260, 0.1, 'triangle', 0.05, 200),
+  ability: k => k === 'sun' ? tone(520, 0.5, 'sine', 0.06, 1040) : tone(300, 0.5, 'sine', 0.06, 150),
+  fail: () => { tone(440, 0.3, 'sine', 0.06, 220); tone(330, 0.45, 'sine', 0.05, 160, 0.15); },
+  win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.35, 'triangle', 0.06, 0, i * 0.11)),
+  cycle: d => tone(d ? 660 : 330, 0.5, 'sine', 0.04, d ? 880 : 247),
+};
+
+/* ================= input ================= */
+const keys = {};
+const touch = {};
+const queued = { sJ: false, mJ: false, sA: false, mA: false };
+const KEYMAP = { KeyA: 'sL', KeyD: 'sR', KeyW: 'sJ', KeyS: 'sA', ArrowLeft: 'mL', ArrowRight: 'mR', ArrowUp: 'mJ', ArrowDown: 'mA' };
+addEventListener('keydown', e => {
+  audioInit();
+  const k = KEYMAP[e.code];
+  if (k) {
+    e.preventDefault();
+    if (!keys[k] && (k in queued)) queued[k] = true;
+    keys[k] = true;
+    if (isTouch && state === 'play') setTouch(false);
+    return;
+  }
+  if (e.repeat) return;
+  if (e.code === 'KeyR' && lvl && (state === 'play' || state === 'fail')) restart();
+  else if (e.code === 'Escape') { if (state === 'menu') { if (lvl) resume(); } else showMenu(); }
+  else if ((e.code === 'Enter' || e.code === 'Space') && state === 'won') { e.preventDefault(); nextLevel(); }
+});
+addEventListener('keyup', e => { const k = KEYMAP[e.code]; if (k) keys[k] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
+
+const padEls = [...document.querySelectorAll('.tb')];
+function readTouches(e) {
+  const on = new Set();
+  for (const t of e.touches) {
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    const b = el && el.closest ? el.closest('.tb') : null;
+    if (b) on.add(b.dataset.k);
+  }
+  for (const b of padEls) {
+    const k = b.dataset.k, v = on.has(k);
+    if (v && !touch[k] && (k in queued)) queued[k] = true;
+    touch[k] = v; b.classList.toggle('on', v);
+  }
+}
+addEventListener('touchstart', e => {
+  audioInit();
+  if (!isTouch) setTouch(true);
+  readTouches(e);
+  if (e.target.closest && e.target.closest('.tb')) e.preventDefault();
+}, { passive: false });
+addEventListener('touchmove', e => { readTouches(e); if (state === 'play') e.preventDefault(); }, { passive: false });
+addEventListener('touchend', readTouches, { passive: false });
+addEventListener('touchcancel', readTouches, { passive: false });
+addEventListener('pointerdown', audioInit);
+function inp(k) { return !!(keys[k] || touch[k]); }
+
+/* ================= state ================= */
+let state = 'menu', cur = 0, lvl = null, grid = null;
+let heroes = [], doors = {}, items = [], zones = [], buttons = [], gates = [], bridges = [], levers = [], lamps = [], clouds = [];
+let effects = [], particles = [], decor = [];
+let sig = {}, time = 0, animT = 0, failT = 0, winT = 0, wonT = 0, lastAmb = 1, hintTimer = 0;
+
+function rect(x, y, w, h) { return { x, y, w, h }; }
+function ov(a, b) { return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y; }
+function inRect(px, py, r) { return px >= r.x && px < r.x + r.w && py >= r.y && py < r.y + r.h; }
+
+function makeHero(kind, c, r) {
+  return { kind, w: 24, h: 24, x: c * T + 3, y: r * T + T - 24, vx: 0, vy: 0, onGround: false, coyote: 0, jumpBuf: 0,
+    energy: 1, face: kind === 'sun' ? 1 : -1, cd: 0, squash: 0, hostile: false, atDoor: false, blink: Math.random() * 3,
+    collected: 0 };
+}
+
+function seeded(seed) { let s = seed * 9301 + 49297; return () => (s = (s * 9301 + 49297) % 233280) / 233280; }
+
+function load(i) {
+  cur = i;
+  const d = LEVELS[i];
+  lvl = d;
+  grid = d.map.map(r => r.split(''));
+  heroes = []; items = []; doors = {};
+  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+    const ch = grid[r][c];
+    if (ch === '1') heroes[0] = makeHero('sun', c, r);
+    else if (ch === '2') heroes[1] = makeHero('moon', c, r);
+    else if (ch === 'A') doors.sun = rect(c * T, (r - 1) * T, T, 2 * T);
+    else if (ch === 'B') doors.moon = rect(c * T, (r - 1) * T, T, 2 * T);
+    else if (ch === 'r' || ch === 's') items.push({ kind: ch === 'r' ? 'sun' : 'moon', x: c * T + T / 2, y: r * T + T / 2, got: false, ph: Math.random() * 6 });
+    else continue;
+    grid[r][c] = '.';
+  }
+  zones = (d.zones || []).map(([x, y, w, h, t]) => ({ x: x * T, y: y * T, w: w * T, h: h * T, t }));
+  buttons = (d.buttons || []).map(b => ({ x: b.x * T + 4, y: b.y * T + T - 7, w: T - 8, h: 7, link: b.link, down: false }));
+  gates = (d.gates || []).map(g => ({ x: g.x * T + 4, y: g.y * T, w: g.w * T - 8, h: g.h * T, link: g.link, open: 0 }));
+  bridges = (d.bridges || []).map(b => ({ x: b.x * T, y: b.y * T, w: b.w * T, h: b.h * T, link: b.link, on: false, a: 0 }));
+  levers = (d.levers || []).map(l => ({ x: l.x * T, y: l.y * T, link: l.link, on: false, a: 0, touching: [false, false] }));
+  lamps = (d.lamps || []).map(l => ({ x: l.x * T, y: l.y * T, r: l.r * T, link: l.link || null, a: l.link ? 0 : 1 }));
+  clouds = (d.clouds || []).map(c => ({ x: c.x * T, y: c.y * T, w: c.w * T, h: c.h * T, link: c.link, a: 0 }));
+  effects = []; particles = []; sig = {};
+  time = 0; failT = 0; winT = 0; wonT = 0; lastAmb = ambient();
+  for (const k in queued) queued[k] = false;
+  const rnd = seeded(i + 7);
+  decor = [];
+  for (let n = 0; n < 90; n++) {
+    const x = rnd() * W, y = rnd() * H;
+    const c = Math.floor(x / T), r = Math.floor(y / T);
+    if (grid[r] && grid[r][c] !== '.') continue;
+    decor.push({ x, y, s: 0.6 + rnd() * 1.2, p: rnd() * 6.28 });
+  }
+  renderTiles();
+  state = 'play';
+  document.body.classList.add('playing');
+  $('menu').classList.add('hidden'); $('win').classList.add('hidden'); $('bar').classList.remove('hidden');
+  $('lvlName').textContent = (i + 1) + '. ' + d.name;
+  $('pads').classList.toggle('noab', !d.ability);
+  showHint();
+}
+function restart() { load(cur); }
+function resume() {
+  if (!lvl) return;
+  state = 'play';
+  document.body.classList.add('playing');
+  $('menu').classList.add('hidden'); $('bar').classList.remove('hidden');
+}
+function nextLevel() { if (cur + 1 < LEVELS.length) load(cur + 1); else showMenu(); }
+
+/* ================= hints / text ================= */
+function keyNames() {
+  return isTouch
+    ? { SM: '◀ ▶ слева', SJ: '▲', SA: '✦ слева', MM: '◀ ▶ справа', MJ: '▲', MA: '✦ справа' }
+    : { SM: 'A / D', SJ: 'W', SA: 'S', MM: '← / →', MJ: '↑', MA: '↓' };
+}
+function fmt(s) { const k = keyNames(); return s.replace(/\{(\w+)\}/g, (_, n) => k[n] || n); }
+function showHint() {
+  const h = $('hint');
+  h.textContent = fmt(lvl.hint);
+  h.classList.remove('fade');
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => h.classList.add('fade'), 14000);
+}
+$('hint').addEventListener('click', () => $('hint').classList.add('fade'));
+function buildHelp() {
+  $('help').innerHTML = isTouch
+    ? 'Держите телефон горизонтально. Слева — кнопки <b style="color:#ffd76e">Солнца</b>, справа — <b style="color:#c6ceff">Луны</b>: ◀ ▶ — ходьба, ▲ — прыжок, ✦ — свой свет.'
+    : '<b style="color:#ffd76e">Солнце</b>: <kbd>A</kbd><kbd>D</kbd> ходьба, <kbd>W</kbd> прыжок, <kbd>S</kbd> свой свет &nbsp;·&nbsp; <b style="color:#c6ceff">Луна</b>: <kbd>←</kbd><kbd>→</kbd> ходьба, <kbd>↑</kbd> прыжок, <kbd>↓</kbd> своя тьма<br><kbd>R</kbd> — заново, <kbd>Esc</kbd> — меню';
+}
+let toastTimer = 0;
+function toast(msg, ms = 1500) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+}
+
+/* ================= menu ================= */
+function starStr(n) { let s = ''; for (let i = 0; i < 3; i++) s += i < n ? '★' : '<span class="e">★</span>'; return s; }
+function buildMenu() {
+  const box = $('levels'); box.innerHTML = '';
+  LEVELS.forEach((L, i) => {
+    const b = document.createElement('button');
+    b.className = 'lv';
+    const locked = i >= save.unlocked;
+    b.disabled = locked;
+    b.innerHTML = `<b>${locked ? '🔒' : i + 1}</b><span>${L.name}</span><em>${starStr(save.stars[i] || 0)}</em>`;
+    b.onclick = () => { audioInit(); goFullscreen(); load(i); };
+    box.appendChild(b);
+  });
+}
+function showMenu() {
+  state = 'menu';
+  document.body.classList.remove('playing');
+  buildMenu();
+  $('menu').classList.remove('hidden'); $('win').classList.add('hidden'); $('bar').classList.add('hidden');
+  $('hint').classList.add('fade');
+}
+function goFullscreen() {
+  if (!isTouch) return;
+  const el = document.documentElement;
+  try {
+    const p = el.requestFullscreen ? el.requestFullscreen() : (el.webkitRequestFullscreen && el.webkitRequestFullscreen());
+    if (p && p.then) p.then(() => { try { screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }).catch(() => {});
+  } catch (e) {}
+}
+$('bMenu').onclick = showMenu;
+$('bRestart').onclick = () => { if (lvl) restart(); };
+$('bHint').onclick = () => { if (lvl) showHint(); };
+$('bSound').onclick = () => {
+  muted = !muted; $('bSound').classList.toggle('off', muted);
+  try { localStorage.setItem('sun-moon.mute', muted ? '1' : '0'); } catch (e) {}
+};
+$('bSound').classList.toggle('off', muted);
+$('wNext').onclick = nextLevel;
+$('wAgain').onclick = restart;
+$('wMenu').onclick = showMenu;
+
+/* ================= world queries ================= */
+function active(link) { return !!sig[link]; }
+function ambient() {
+  if (!lvl.cycle) return lvl.ambient;
+  const { day, night } = lvl.cycle, p = time % (day + night);
+  return p < day ? 1 : -1;
+}
+function ambientMix() { // 1 = день, 0 = ночь (для отрисовки)
+  if (!lvl.cycle) return lvl.ambient > 0 ? 1 : 0;
+  const { day, night } = lvl.cycle, P = day + night, p = time % P;
+  if (time < 0.5) return 1;
+  let s;
+  if (p < 0.5) s = 0.5 + p;
+  else if (p < day - 0.5) s = 1;
+  else if (p < day + 0.5) s = 1 - (p - (day - 0.5));
+  else if (p < P - 0.5) s = 0;
+  else s = p - (P - 0.5);
+  return Math.max(0, Math.min(1, s));
+}
+function effK(e) { return Math.min(1, e.t / 0.25) * Math.min(1, (e.dur - e.t) / 0.4); }
+function lightAt(x, y) {
+  for (let i = effects.length - 1; i >= 0; i--) {
+    const e = effects[i], r = e.r * effK(e);
+    if ((x - e.x) ** 2 + (y - e.y) ** 2 < r * r) return e.type;
+  }
+  for (const c of clouds) if (active(c.link) && inRect(x, y, c)) return -1;
+  for (const l of lamps) if ((!l.link || active(l.link)) && (x - l.x) ** 2 + (y - l.y) ** 2 < l.r * l.r) return 1;
+  for (let i = zones.length - 1; i >= 0; i--) if (inRect(x, y, zones[i])) return zones[i].t;
+  return ambient();
+}
+function solidTile(c, r, kind) {
+  if (c < 0 || c >= COLS) return true;
+  if (r < 0 || r >= ROWS) return false;
+  const ch = grid[r][c];
+  return ch === '#' || (ch === '+' && kind === 'sun') || (ch === 'x' && kind === 'moon');
+}
+function solidsNear(h) {
+  const out = [];
+  const c0 = Math.floor(h.x / T) - 1, c1 = Math.floor((h.x + h.w) / T) + 1;
+  const r0 = Math.floor(h.y / T) - 1, r1 = Math.floor((h.y + h.h) / T) + 1;
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (solidTile(c, r, h.kind)) out.push(rect(c * T, r * T, T, T));
+  for (const g of gates) { const gh = g.h * (1 - g.open); if (gh > 2) out.push({ x: g.x, y: g.y, w: g.w, h: gh, dyn: true }); }
+  for (const b of bridges) if (b.on) out.push({ x: b.x, y: b.y, w: b.w, h: b.h, dyn: true });
+  return out;
+}
+const center = h => [h.x + h.w / 2, h.y + h.h / 2];
+function eclipseOn() {
+  if (!lvl.eclipse) return false;
+  const [ax, ay] = center(heroes[0]), [bx, by] = center(heroes[1]);
+  return Math.hypot(ax - bx, ay - by) < ECLIPSE_DIST;
+}
+
+/* ================= simulation ================= */
+function step(dt) {
+  // particles & animations always run
+  for (const p of particles) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += (p.g || 0) * dt; }
+  particles = particles.filter(p => p.life > 0);
+  for (const g of gates) g.open += ((active(g.link) ? 1 : 0) - g.open) * Math.min(1, dt * 10);
+  for (const b of bridges) b.a += ((b.on ? 1 : 0) - b.a) * Math.min(1, dt * 10);
+  for (const l of levers) l.a += ((l.on ? 1 : 0) - l.a) * Math.min(1, dt * 12);
+  for (const l of lamps) if (l.link) l.a += ((active(l.link) ? 1 : 0) - l.a) * Math.min(1, dt * 6);
+  for (const c of clouds) c.a += ((active(c.link) ? 1 : 0) - c.a) * Math.min(1, dt * 4);
+
+  if (state === 'fail') { failT -= dt; if (failT <= 0) restart(); return; }
+  if (state === 'won') { wonT += dt; if (Math.random() < 0.3) spawnConfetti(); return; }
+  if (state !== 'play') return;
+
+  time += dt;
+
+  // day / night switch
+  const amb = ambient();
+  if (amb !== lastAmb) { lastAmb = amb; sfx.cycle(amb > 0); toast(amb > 0 ? '☀ Наступил день' : '☾ Наступила ночь', 1200); }
+
+  // signals: buttons (momentary) + levers (toggle)
+  const prev = sig; sig = {};
+  for (const b of buttons) {
+    const was = b.down;
+    b.down = heroes.some(h => ov(h, b));
+    if (b.down && !was) sfx.button();
+    if (b.down) sig[b.link] = true;
+  }
+  for (const l of levers) if (l.on) sig[l.link] = true;
+  for (const b of bridges) b.on = active(b.link);
+
+  // own light effects
+  for (const e of effects) e.t += dt;
+  effects = effects.filter(e => e.t < e.dur);
+
+  for (let i = 0; i < 2; i++) updateHero(heroes[i], heroes[1 - i], dt, i);
+  for (const k in queued) queued[k] = false;
+  if (state !== 'play') return;
+
+  // levers
+  for (const l of levers) {
+    const box = rect(l.x + 5, l.y + 2, T - 10, T - 2);
+    heroes.forEach((h, i) => {
+      const t = ov(h, box);
+      if (t && !l.touching[i]) { l.on = !l.on; sfx.lever(); burst(l.x + T / 2, l.y + 8, LINK_C[l.link] || '#fff', 8); }
+      l.touching[i] = t;
+    });
+  }
+
+  // collectibles
+  for (const it of items) {
+    if (it.got) continue;
+    const h = heroes[it.kind === 'sun' ? 0 : 1];
+    const [hx, hy] = center(h);
+    if (Math.hypot(hx - it.x, hy - it.y) < 22) {
+      it.got = true; h.collected++;
+      it.kind === 'sun' ? sfx.ray() : sfx.star();
+      burst(it.x, it.y, it.kind === 'sun' ? '#ffd76e' : '#cfd7ff', 14);
+    }
+  }
+
+  // light / energy
+  const ecl = eclipseOn();
+  for (const h of heroes) {
+    const [hx, hy] = center(h);
+    const l = lightAt(hx, hy);
+    const safe = ecl || (h.kind === 'sun' ? l > 0 : l < 0);
+    h.hostile = !safe;
+    h.energy = safe ? Math.min(1, h.energy + REGEN * dt) : h.energy - DRAIN * dt;
+    if (!safe && Math.random() < dt * 14) particles.push({ x: hx + (Math.random() - .5) * 20, y: hy + (Math.random() - .5) * 20, vx: 0, vy: -20, life: .6, max: .6, size: 2, color: h.kind === 'sun' ? 'rgba(255,200,120,1)' : 'rgba(200,210,255,1)' });
+    if (h.energy <= 0) { h.energy = 0; fail(h.kind === 'sun' ? 'Солнце погасло…' : 'Луна растаяла в свете…', h); return; }
+  }
+
+  // doors
+  for (const h of heroes) { const [hx, hy] = center(h); h.atDoor = inRect(hx, hy, doors[h.kind]); }
+  if (heroes[0].atDoor && heroes[1].atDoor) { winT += dt; if (winT > 0.35) win(); } else winT = 0;
+}
+
+function updateHero(h, other, dt, idx) {
+  const p = idx === 0 ? 's' : 'm';
+  const dir = (inp(p + 'R') ? 1 : 0) - (inp(p + 'L') ? 1 : 0);
+  const a = h.onGround ? ACC : AIR_ACC, target = dir * SPEED;
+  if (h.vx < target) h.vx = Math.min(target, h.vx + a * dt); else if (h.vx > target) h.vx = Math.max(target, h.vx - a * dt);
+  if (dir) h.face = dir;
+
+  if (queued[p + 'J']) h.jumpBuf = BUFFER;
+  h.jumpBuf -= dt;
+  h.coyote = h.onGround ? COYOTE : h.coyote - dt;
+  if (h.jumpBuf > 0 && h.coyote > 0) {
+    h.vy = -JUMP_V; h.jumpBuf = 0; h.coyote = 0; h.onGround = false; h.squash = -0.25;
+    sfx.jump(h.kind); puff(h.x + h.w / 2, h.y + h.h, h.kind);
+  }
+  const held = inp(p + 'J');
+  h.vy = Math.min(MAX_FALL, h.vy + GRAV * (h.vy < 0 && !held ? 2.3 : 1) * dt);
+
+  // ability
+  h.cd = Math.max(0, h.cd - dt);
+  if (queued[p + 'A'] && lvl.ability && h.cd <= 0) {
+    const [cx, cy] = center(h);
+    effects.push({ type: h.kind === 'sun' ? 1 : -1, x: cx, y: cy, r: AB_R, t: 0, dur: AB_DUR, kind: h.kind });
+    h.cd = AB_CD; sfx.ability(h.kind);
+  }
+
+  // move & collide
+  const sol = solidsNear(h);
+  const ign = sol.map(r => r.dyn && ov(h, r));
+  h.x += h.vx * dt;
+  for (let i = 0; i < sol.length; i++) {
+    if (ign[i] || !ov(h, sol[i])) continue;
+    const r = sol[i];
+    if (h.vx > 0) h.x = r.x - h.w; else if (h.vx < 0) h.x = r.x + r.w;
+    h.vx = 0;
+  }
+  const wasGround = h.onGround, vyBefore = h.vy, prevBottom = h.y + h.h;
+  h.y += h.vy * dt;
+  h.onGround = false;
+  for (let i = 0; i < sol.length; i++) {
+    if (ign[i] || !ov(h, sol[i])) continue;
+    const r = sol[i];
+    if (h.vy >= 0) { h.y = r.y - h.h; h.onGround = true; } else h.y = r.y + r.h;
+    h.vy = 0;
+  }
+  // stand on partner's head
+  if (h.vy >= 0 && prevBottom <= other.y + 0.5 && h.y + h.h > other.y && h.x < other.x + other.w - 2 && h.x + h.w > other.x + 2) {
+    h.y = other.y - h.h; h.vy = 0; h.onGround = true;
+  }
+  if (h.y < -80) { h.y = -80; h.vy = Math.max(0, h.vy); }
+  if (h.onGround && !wasGround && vyBefore > 250) { h.squash = Math.min(0.35, vyBefore / 2000); puff(h.x + h.w / 2, h.y + h.h, h.kind); }
+  h.squash *= Math.pow(0.0001, dt);
+  h.blink -= dt; if (h.blink < -0.12) h.blink = 2 + Math.random() * 3;
+
+  if (h.y > H + 40) fail(h.kind === 'sun' ? 'Солнце упало в бездну…' : 'Луна упала в бездну…', h);
+}
+
+function fail(msg, h) {
+  if (state !== 'play') return;
+  state = 'fail'; failT = 1.6;
+  sfx.fail(); toast(msg, 1500);
+  const [hx, hy] = center(h);
+  burst(hx, Math.min(hy, H - 10), h.kind === 'sun' ? '#ffcf70' : '#c9d2ff', 24);
+}
+function rating() {
+  if (!items.length) return 3;
+  const got = items.filter(i => i.got).length;
+  return got === items.length ? 3 : got * 2 >= items.length ? 2 : 1;
+}
+function win() {
+  state = 'won'; wonT = 0;
+  sfx.win();
+  const stars = rating();
+  save.stars[cur] = Math.max(save.stars[cur] || 0, stars);
+  save.unlocked = Math.max(save.unlocked, Math.min(LEVELS.length, cur + 2));
+  persist();
+  for (const h of heroes) { const [x, y] = center(h); burst(x, y, h.kind === 'sun' ? '#ffd76e' : '#cfd7ff', 30); }
+  setTimeout(() => {
+    if (state !== 'won') return;
+    const rays = items.filter(i => i.kind === 'sun'), st = items.filter(i => i.kind === 'moon');
+    const last = cur === LEVELS.length - 1;
+    $('winTitle').textContent = last ? 'Великое затмение! Все уровни пройдены' : 'Уровень пройден!';
+    $('winStars').innerHTML = starStr(stars);
+    $('winInfo').textContent = items.length
+      ? `Лучи: ${rays.filter(i => i.got).length} / ${rays.length}  ·  Звёзды: ${st.filter(i => i.got).length} / ${st.length}`
+      : 'Отличное начало!';
+    $('wNext').classList.toggle('hidden', last);
+    $('win').classList.remove('hidden');
+  }, 900);
+}
+
+/* ================= particles ================= */
+function burst(x, y, color, n) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, s = 40 + Math.random() * 110;
+    particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 30, g: 120, life: 0.5 + Math.random() * 0.5, max: 1, size: 1.5 + Math.random() * 2.5, color });
+  }
+}
+function puff(x, y, kind) {
+  for (let i = 0; i < 5; i++) particles.push({ x: x + (Math.random() - .5) * 16, y: y - 2, vx: (Math.random() - .5) * 60, vy: -Math.random() * 30, life: .35, max: .35, size: 3 + Math.random() * 2, color: kind === 'sun' ? 'rgba(255,230,170,1)' : 'rgba(210,215,255,1)' });
+}
+function spawnConfetti() {
+  const x = Math.random() * W;
+  particles.push({ x, y: -5, vx: (Math.random() - .5) * 40, vy: 60 + Math.random() * 60, life: 4, max: 4, size: 2 + Math.random() * 2, color: Math.random() < .5 ? '#ffd76e' : '#cfd7ff' });
+}
+
+/* ================= drawing helpers ================= */
+function rr(g, x, y, w, h, r) {
+  const [tl, tr, br, bl] = Array.isArray(r) ? r : [r, r, r, r];
+  g.moveTo(x + tl, y);
+  g.lineTo(x + w - tr, y); tr ? g.arcTo(x + w, y, x + w, y + tr, tr) : g.lineTo(x + w, y);
+  g.lineTo(x + w, y + h - br); br ? g.arcTo(x + w, y + h, x + w - br, y + h, br) : g.lineTo(x + w, y + h);
+  g.lineTo(x + bl, y + h); bl ? g.arcTo(x, y + h, x, y + h - bl, bl) : g.lineTo(x, y + h);
+  g.lineTo(x, y + tl); tl ? g.arcTo(x, y, x + tl, y, tl) : g.lineTo(x, y);
+  g.closePath();
+}
+function starPath(g, x, y, n, r1, r2, rot) {
+  g.beginPath();
+  for (let i = 0; i < n * 2; i++) {
+    const r = i % 2 ? r2 : r1, a = rot + i * Math.PI / n - Math.PI / 2;
+    g.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+  }
+  g.closePath();
+}
+function mix(a, b, t) { return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',')})`; }
+function glow(g, x, y, r, color, alpha) {
+  const gr = g.createRadialGradient(x, y, 0, x, y, r);
+  gr.addColorStop(0, color.replace('A', alpha)); gr.addColorStop(1, color.replace('A', 0));
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+}
+
+const TILE_STYLE = {
+  '#': { base: '#b5abd0', top: '#e6def7', bottom: 'rgba(60,40,110,.22)', glow: null },
+  '+': { base: '#ffcf5c', top: '#fff2bf', bottom: 'rgba(200,110,20,.25)', glow: 'rgba(255,190,70,.85)' },
+  'x': { base: '#8f79ec', top: '#cfc2ff', bottom: 'rgba(40,20,120,.3)', glow: 'rgba(140,110,255,.85)' },
+};
+function renderTiles() {
+  const g = tilesCv.getContext('2d');
+  g.setTransform(2, 0, 0, 2, 0, 0);
+  g.clearRect(0, 0, W, H);
+  for (const ch of ['#', '+', 'x']) {
+    const st = TILE_STYLE[ch];
+    const same = (c, r) => r >= 0 && r < ROWS && c >= 0 && c < COLS && grid[r][c] === ch;
+    const path = new Path2D(), tops = new Path2D();
+    let any = false;
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      if (grid[r][c] !== ch) continue;
+      any = true;
+      const up = same(c, r - 1), dn = same(c, r + 1), lf = same(c - 1, r), rt = same(c + 1, r);
+      const R = 9;
+      const x = c * T - (lf ? 0.5 : 0), y = r * T - (up ? 0.5 : 0);
+      const w = T + (lf ? 0.5 : 0) + (rt ? 0.5 : 0), hh = T + (up ? 0.5 : 0) + (dn ? 0.5 : 0);
+      rr(path, x, y, w, hh, [!up && !lf ? R : 0, !up && !rt ? R : 0, !dn && !rt ? R : 0, !dn && !lf ? R : 0]);
+      if (!up) rr(tops, c * T + (lf ? -0.5 : 3), r * T + 2, T - (lf ? -0.5 : 3) - (rt ? -0.5 : 3), 5, [lf ? 0 : 3, rt ? 0 : 3, 3, 3]);
+    }
+    if (!any) continue;
+    g.save();
+    if (st.glow) { g.shadowColor = st.glow; g.shadowBlur = 14; }
+    g.fillStyle = st.base; g.fill(path);
+    g.restore();
+    g.save(); g.clip(path);
+    // мягкое затенение снизу у каждой открытой нижней грани
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      if (grid[r][c] !== ch || same(c, r + 1)) continue;
+      const gr = g.createLinearGradient(0, r * T + 10, 0, r * T + T);
+      gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, st.bottom);
+      g.fillStyle = gr; g.fillRect(c * T, r * T, T, T);
+    }
+    g.fillStyle = st.top; g.globalAlpha = 0.85; g.fill(tops);
+    if (ch !== '#') {
+      g.globalAlpha = 0.5; g.fillStyle = '#fff';
+      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c] === ch) {
+        g.beginPath(); g.arc(c * T + 8 + ((c * 7 + r * 3) % 14), r * T + 15 + ((c * 5) % 8), 1.4, 0, 7); g.fill();
+      }
+    }
+    g.restore();
+  }
+}
+
+/* ================= rendering ================= */
+function paintLight() {
+  const g = lctx, s = lc.width / W;
+  g.setTransform(s, 0, 0, s, 0, 0);
+  g.globalAlpha = 1;
+  g.fillStyle = mix(NIGHT, DAY, ambientMix()); g.fillRect(0, 0, W, H);
+  for (const z of zones) { g.fillStyle = z.t > 0 ? mix(DAY, DAY, 0) : mix(NIGHT, NIGHT, 0); g.fillRect(z.x, z.y, z.w, z.h); }
+  g.fillStyle = LAMP_C;
+  for (const l of lamps) if (l.a > 0.01) { g.globalAlpha = l.a; g.beginPath(); g.arc(l.x, l.y, l.r, 0, Math.PI * 2); g.fill(); }
+  g.fillStyle = CLOUD_C;
+  for (const c of clouds) if (c.a > 0.01) { g.globalAlpha = c.a; g.fillRect(c.x, c.y, c.w, c.h); }
+  for (const e of effects) {
+    g.globalAlpha = 1; g.fillStyle = e.type > 0 ? FLARE_C : SHADE_C;
+    g.beginPath(); g.arc(e.x, e.y, e.r * effK(e), 0, Math.PI * 2); g.fill();
+  }
+  g.globalAlpha = 1;
+}
+
+function render(dt) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#121231'; ctx.fillRect(0, 0, cv.width, cv.height);
+  ctx.setTransform(sc, 0, 0, sc, ox, oy);
+  if (state === 'menu' && !lvl) { renderMenuBg(); return; }
+  if (state === 'menu') { renderWorld(); ctx.fillStyle = 'rgba(14,12,36,.35)'; ctx.fillRect(0, 0, W, H); return; }
+  renderWorld();
+  renderHUD();
+}
+
+function renderWorld() {
+  ctx.save();
+  ctx.beginPath(); rr(ctx, 0, 0, W, H, 14); ctx.clip();
+  paintLight();
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(lc, 0, 0, W, H);
+  let gr = ctx.createLinearGradient(0, 0, 0, H);
+  gr.addColorStop(0, 'rgba(255,255,255,.10)'); gr.addColorStop(1, 'rgba(20,0,50,.22)');
+  ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+
+  // decor: stars in darkness, motes in light
+  for (const d of decor) {
+    const l = lightAt(d.x, d.y), tw = 0.5 + 0.5 * Math.sin(animT * 2 + d.p);
+    if (l < 0) {
+      ctx.fillStyle = `rgba(230,235,255,${0.25 + 0.55 * tw})`;
+      ctx.beginPath(); ctx.arc(d.x, d.y, d.s * (0.7 + 0.5 * tw), 0, 7); ctx.fill();
+    } else {
+      ctx.fillStyle = `rgba(255,255,255,${0.12 + 0.18 * tw})`;
+      ctx.beginPath(); ctx.arc(d.x + Math.sin(animT * .5 + d.p) * 4, d.y + Math.cos(animT * .4 + d.p) * 3, d.s * 2.2, 0, 7); ctx.fill();
+    }
+  }
+
+  // warm glow of lamps and own light
+  ctx.globalCompositeOperation = 'lighter';
+  for (const l of lamps) if (l.a > 0.01) glow(ctx, l.x, l.y, l.r * 1.05, 'rgba(255,200,110,A)', 0.28 * l.a);
+  for (const e of effects) if (e.type > 0) glow(ctx, e.x, e.y, e.r * effK(e) * 1.1, 'rgba(255,220,130,A)', 0.35);
+  ctx.globalCompositeOperation = 'source-over';
+  for (const e of effects) {
+    const k = effK(e);
+    ctx.strokeStyle = e.type > 0 ? `rgba(255,225,140,${0.6 * k})` : `rgba(170,150,255,${0.6 * k})`;
+    ctx.lineWidth = 2; ctx.setLineDash([6, 8]); ctx.lineDashOffset = -animT * 20;
+    ctx.beginPath(); ctx.arc(e.x, e.y, e.r * k, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  drawClouds();
+  ctx.drawImage(tilesCv, 0, 0, W, H);
+  drawBridges(); drawGates(); drawButtons(); drawLevers(); drawLamps();
+  drawDoor(doors.sun, 'sun'); drawDoor(doors.moon, 'moon');
+  drawItems();
+  if (eclipseOn() && state !== 'won') drawEclipse();
+  for (const h of heroes) drawHero(h);
+  for (const p of particles) {
+    ctx.globalAlpha = Math.max(0, Math.min(1, p.life / p.max * 1.5));
+    ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 7); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawClouds() {
+  for (const c of clouds) {
+    const a = 0.25 + 0.75 * c.a;
+    const n = Math.max(3, Math.round(c.w / 46));
+    for (let i = 0; i < n; i++) {
+      const x = c.x + (i + 0.5) * c.w / n + Math.sin(animT * 0.6 + i) * 4;
+      const y = c.y + 22 + (i % 2) * 8 + Math.cos(animT * 0.5 + i * 2) * 3;
+      const r = 26 + (i % 3) * 6;
+      ctx.fillStyle = `rgba(${c.a > 0.5 ? '92,98,150' : '220,226,255'},${0.18 + 0.55 * c.a * a})`;
+      ctx.beginPath(); ctx.arc(x, y, r * (0.6 + 0.4 * c.a), 0, 7); ctx.fill();
+    }
+    if (c.a < 0.5) {
+      ctx.strokeStyle = `rgba(200,210,255,${0.25 * (1 - c.a)})`; ctx.setLineDash([5, 7]); ctx.lineWidth = 1.5;
+      ctx.beginPath(); rr(ctx, c.x + 3, c.y + 3, c.w - 6, c.h - 6, 14); ctx.stroke(); ctx.setLineDash([]);
+    }
+    if (c.a > 0.3 && Math.random() < 0.15 * c.a) particles.push({ x: c.x + Math.random() * c.w, y: c.y + 40, vx: 0, vy: 90, life: 1.2, max: 1.2, size: 1, color: 'rgba(170,185,240,.7)' });
+  }
+}
+function drawBridges() {
+  for (const b of bridges) {
+    const col = LINK_C[b.link] || '#fff';
+    if (b.a > 0.02) {
+      ctx.save(); ctx.globalAlpha = b.a; ctx.shadowColor = col; ctx.shadowBlur = 14;
+      ctx.fillStyle = col; ctx.beginPath(); rr(ctx, b.x + 1, b.y + 3, b.w - 2, b.h - 6, 8); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.beginPath(); rr(ctx, b.x + 6, b.y + 5, b.w - 12, 4, 2); ctx.fill();
+      ctx.restore();
+    }
+    if (b.a < 0.98) {
+      ctx.strokeStyle = col; ctx.globalAlpha = 0.5 * (1 - b.a); ctx.lineWidth = 2; ctx.setLineDash([6, 6]);
+      ctx.beginPath(); rr(ctx, b.x + 2, b.y + 4, b.w - 4, b.h - 8, 8); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    }
+  }
+}
+function drawGates() {
+  for (const g of gates) {
+    const col = LINK_C[g.link] || '#fff', hh = g.h * (1 - g.open);
+    ctx.strokeStyle = col; ctx.globalAlpha = 0.35; ctx.lineWidth = 1.5; ctx.setLineDash([4, 6]);
+    ctx.beginPath(); rr(ctx, g.x, g.y, g.w, g.h, 8); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+    if (hh < 2) continue;
+    ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = 12; ctx.fillStyle = col;
+    ctx.beginPath(); rr(ctx, g.x, g.y, g.w, hh, [0, 0, 8, 8]); ctx.fill(); ctx.restore();
+    ctx.save(); ctx.beginPath(); rr(ctx, g.x, g.y, g.w, hh, [0, 0, 8, 8]); ctx.clip();
+    ctx.fillStyle = 'rgba(255,255,255,.35)';
+    for (let y = g.y + hh - 14; y > g.y - 10; y -= 16) { ctx.beginPath(); ctx.arc(g.x + g.w / 2, y, 3.5, 0, 7); ctx.fill(); }
+    ctx.restore();
+  }
+}
+function drawButtons() {
+  for (const b of buttons) {
+    const col = LINK_C[b.link] || '#fff', h = b.down ? 3 : 6;
+    ctx.save();
+    if (b.down) { ctx.shadowColor = col; ctx.shadowBlur = 16; }
+    ctx.fillStyle = 'rgba(40,30,80,.5)'; ctx.beginPath(); rr(ctx, b.x - 2, b.y + 4, b.w + 4, 3, 1.5); ctx.fill();
+    ctx.fillStyle = col; ctx.beginPath(); rr(ctx, b.x, b.y + 7 - h, b.w, h, [4, 4, 1, 1]); ctx.fill();
+    ctx.restore();
+  }
+}
+function leverIcon(l) {
+  if (clouds.some(c => c.link === l.link)) return 'cloud';
+  if (lamps.some(c => c.link === l.link)) return 'lamp';
+  return 'gate';
+}
+function drawLevers() {
+  for (const l of levers) {
+    const col = LINK_C[l.link] || '#fff', bx = l.x + T / 2, by = l.y + T;
+    const ang = -0.7 + 1.4 * l.a;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(bx, by - 5); ctx.lineTo(bx + Math.sin(ang) * 17, by - 5 - Math.cos(ang) * 17); ctx.stroke();
+    ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(bx + Math.sin(ang) * 17, by - 5 - Math.cos(ang) * 17, 4.5, 0, 7); ctx.fill();
+    ctx.shadowBlur = 0; ctx.fillStyle = '#6d5fa8';
+    ctx.beginPath(); rr(ctx, bx - 9, by - 7, 18, 7, [5, 5, 1, 1]); ctx.fill();
+    // icon
+    const ix = bx, iy = l.y - 8 + Math.sin(animT * 2 + l.x) * 1.5;
+    ctx.globalAlpha = 0.9;
+    if (leverIcon(l) === 'cloud') {
+      ctx.fillStyle = '#c9d0f5';
+      ctx.beginPath(); ctx.arc(ix - 5, iy + 1, 4.5, 0, 7); ctx.arc(ix + 1, iy - 2, 5.5, 0, 7); ctx.arc(ix + 6, iy + 1, 4, 0, 7); ctx.fill();
+    } else if (leverIcon(l) === 'lamp') {
+      ctx.fillStyle = '#ffe08a'; ctx.shadowColor = '#ffd36b'; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(ix, iy, 5, 0, 7); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+function drawLamps() {
+  for (const l of lamps) {
+    const on = l.a;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(200,190,230,.5)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(l.x, l.y - 9); ctx.lineTo(l.x, l.y - 16); ctx.stroke();
+    ctx.fillStyle = '#7e70b6'; ctx.beginPath(); rr(ctx, l.x - 6, l.y - 12, 12, 4, 2); ctx.fill();
+    if (on > 0.05) { glow(ctx, l.x, l.y, 26, 'rgba(255,220,140,A)', 0.8 * on); ctx.shadowColor = '#ffd27a'; ctx.shadowBlur = 18 * on; }
+    const gr = ctx.createRadialGradient(l.x - 2, l.y - 2, 1, l.x, l.y, 8);
+    gr.addColorStop(0, on > 0.5 ? '#fffbe6' : '#a59e86'); gr.addColorStop(1, on > 0.5 ? '#ffc94f' : '#6a6352');
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(l.x, l.y, 8, 0, 7); ctx.fill();
+    ctx.restore();
+  }
+}
+function drawDoor(d, kind) {
+  if (!d) return;
+  const x = d.x + 2, y = d.y + 6, w = T - 4, h = 2 * T - 6;
+  const sun = kind === 'sun';
+  const h0 = heroes[sun ? 0 : 1], lit = h0 && h0.atDoor;
+  ctx.save();
+  glow(ctx, x + w / 2, y + h / 2, 44 + (lit ? 10 * Math.sin(animT * 6) : 0), sun ? 'rgba(255,200,90,A)' : 'rgba(160,175,255,A)', lit ? 0.75 : 0.35);
+  const p = new Path2D(); rr(p, x, y, w, h, [w / 2, w / 2, 3, 3]);
+  const gr = ctx.createLinearGradient(0, y, 0, y + h);
+  if (sun) { gr.addColorStop(0, '#ffe9a6'); gr.addColorStop(1, '#ffa94a'); } else { gr.addColorStop(0, '#e3e8ff'); gr.addColorStop(1, '#8a86e8'); }
+  ctx.fillStyle = gr; ctx.fill(p);
+  const p2 = new Path2D(); rr(p2, x + 4, y + 4, w - 8, h - 4, [(w - 8) / 2, (w - 8) / 2, 2, 2]);
+  ctx.fillStyle = sun ? 'rgba(140,60,0,.35)' : 'rgba(30,20,90,.45)'; ctx.fill(p2);
+  // emblem
+  const ex = x + w / 2, ey = y + 18;
+  if (sun) {
+    ctx.fillStyle = '#ffe58a';
+    starPath(ctx, ex, ey, 8, 7, 4, animT * 0.5); ctx.fill();
+    ctx.fillStyle = '#ffc24a'; ctx.beginPath(); ctx.arc(ex, ey, 4, 0, 7); ctx.fill();
+  } else {
+    ctx.fillStyle = '#eef1ff'; ctx.beginPath(); ctx.arc(ex, ey, 6, 0, 7); ctx.fill();
+    ctx.fillStyle = sun ? '' : '#5b4fae'; ctx.beginPath(); ctx.arc(ex + 3, ey - 2, 5.5, 0, 7); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawItems() {
+  for (const it of items) {
+    if (it.got) continue;
+    const bob = Math.sin(animT * 3 + it.ph) * 2.5, x = it.x, y = it.y + bob;
+    if (it.kind === 'sun') {
+      glow(ctx, x, y, 18, 'rgba(255,210,90,A)', 0.6);
+      ctx.fillStyle = '#ffe07a'; starPath(ctx, x, y, 4, 10, 3, animT * 1.5 + it.ph); ctx.fill();
+      ctx.fillStyle = '#fff6d0'; ctx.beginPath(); ctx.arc(x, y, 2.5, 0, 7); ctx.fill();
+    } else {
+      glow(ctx, x, y, 18, 'rgba(180,195,255,A)', 0.6);
+      ctx.fillStyle = '#e6eaff'; starPath(ctx, x, y, 5, 9, 4, Math.sin(animT + it.ph) * 0.3); ctx.fill();
+    }
+  }
+}
+function drawEclipse() {
+  const [ax, ay] = center(heroes[0]), [bx, by] = center(heroes[1]);
+  const mx = (ax + bx) / 2, my = (ay + by) / 2, d = Math.hypot(ax - bx, ay - by), r = d / 2 + 34;
+  const gr = ctx.createRadialGradient(mx, my, r * 0.3, mx, my, r);
+  gr.addColorStop(0, 'rgba(225,215,245,.28)'); gr.addColorStop(0.75, 'rgba(200,190,235,.22)'); gr.addColorStop(1, 'rgba(200,190,235,0)');
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(mx, my, r, 0, 7); ctx.fill();
+  ctx.strokeStyle = 'rgba(240,235,255,.45)'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 6]); ctx.lineDashOffset = animT * 12;
+  ctx.beginPath(); ctx.arc(mx, my, r - 6, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+}
+function drawHero(h) {
+  const [cx, cy] = center(h), e = Math.max(0, h.energy), sun = h.kind === 'sun', R = 13;
+  const flick = h.hostile ? 0.75 + 0.25 * Math.sin(animT * 30) : 1;
+  ctx.save();
+  // glow
+  glow(ctx, cx, cy, R * 3.2, sun ? 'rgba(255,190,70,A)' : 'rgba(150,175,255,A)', (0.15 + 0.45 * e) * flick);
+  ctx.translate(cx, cy + R);
+  const sq = h.squash;
+  ctx.scale(1 + sq * 0.6, 1 - sq);
+  ctx.translate(0, -R);
+  ctx.globalAlpha = 0.45 + 0.55 * e;
+  if (sun) {
+    ctx.fillStyle = '#ffcf5a';
+    const n = 10, len = 3 + 5 * e;
+    for (let i = 0; i < n; i++) {
+      const a = animT * 0.8 + i * Math.PI * 2 / n;
+      ctx.save(); ctx.rotate(a);
+      ctx.beginPath(); ctx.moveTo(-3, -R + 1); ctx.lineTo(0, -R - len); ctx.lineTo(3, -R + 1); ctx.closePath(); ctx.fill();
+      ctx.restore();
+    }
+  }
+  const gr = ctx.createRadialGradient(-4, -5, 1, 0, 0, R);
+  if (sun) { gr.addColorStop(0, '#fffbd8'); gr.addColorStop(0.55, '#ffc84a'); gr.addColorStop(1, '#ff9a2e'); }
+  else { gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.6, '#d4dcff'); gr.addColorStop(1, '#9aa8ee'); }
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.fill();
+  if (!sun) {
+    ctx.fillStyle = 'rgba(130,140,210,.35)';
+    ctx.beginPath(); ctx.arc(5, 5, 3, 0, 7); ctx.arc(-6, 4, 2, 0, 7); ctx.arc(2, -7, 2.2, 0, 7); ctx.fill();
+  }
+  // dimming
+  if (e < 1) { ctx.fillStyle = `rgba(40,36,80,${(1 - e) * 0.6})`; ctx.beginPath(); ctx.arc(0, 0, R, 0, 7); ctx.fill(); }
+  // face
+  ctx.globalAlpha = 1;
+  const fx = h.face * 2.5, closed = h.blink < 0;
+  ctx.fillStyle = sun ? '#7a3b00' : '#3b3a7a';
+  for (const s of [-1, 1]) {
+    ctx.beginPath();
+    if (closed) { ctx.ellipse(fx + s * 4.5, -1, 2.2, 0.8, 0, 0, 7); }
+    else { ctx.ellipse(fx + s * 4.5, -1.5, 1.8, h.hostile ? 1.6 : 2.6, 0, 0, 7); }
+    ctx.fill();
+  }
+  ctx.fillStyle = sun ? 'rgba(255,120,80,.45)' : 'rgba(200,140,220,.4)';
+  ctx.beginPath(); ctx.arc(fx - 7, 3.5, 2.2, 0, 7); ctx.arc(fx + 7, 3.5, 2.2, 0, 7); ctx.fill();
+  ctx.strokeStyle = sun ? '#7a3b00' : '#3b3a7a'; ctx.lineWidth = 1.3; ctx.lineCap = 'round';
+  ctx.beginPath();
+  if (h.hostile) ctx.arc(fx, 6.5, 2.2, Math.PI * 1.15, Math.PI * 1.85); else ctx.arc(fx, 2.5, 2.6, 0.2 * Math.PI, 0.8 * Math.PI);
+  ctx.stroke();
+  ctx.restore();
+  // energy ring
+  if (e < 0.995) {
+    ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(20,20,50,.35)'; ctx.beginPath(); ctx.arc(cx, cy, R + 7, 0, 7); ctx.stroke();
+    ctx.strokeStyle = e < 0.35 ? '#ff7a7a' : sun ? '#ffd36b' : '#c3ccff';
+    ctx.beginPath(); ctx.arc(cx, cy, R + 7, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * e); ctx.stroke();
+  }
+}
+
+/* ================= HUD ================= */
+function renderHUD() {
+  const both = [heroes[0], heroes[1]];
+  both.forEach((h, i) => {
+    const sun = i === 0, w = 214, hgt = 28, x = sun ? 8 : W - 8 - w, y = 6;
+    ctx.fillStyle = 'rgba(20,18,50,.5)'; ctx.beginPath(); rr(ctx, x, y, w, hgt, 14); ctx.fill();
+    // icon
+    const ix = sun ? x + 16 : x + w - 16, iy = y + 14;
+    const gr = ctx.createRadialGradient(ix - 2, iy - 2, 1, ix, iy, 8);
+    if (sun) { gr.addColorStop(0, '#fff6c8'); gr.addColorStop(1, '#ffa83a'); } else { gr.addColorStop(0, '#fff'); gr.addColorStop(1, '#9aa8ee'); }
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(ix, iy, 8, 0, 7); ctx.fill();
+    // energy bar
+    const bw = 80, bx = sun ? x + 30 : x + w - 30 - bw, by = y + 10;
+    ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.beginPath(); rr(ctx, bx, by, bw, 8, 4); ctx.fill();
+    const e = Math.max(0, h.energy);
+    ctx.fillStyle = e < 0.35 ? '#ff8080' : sun ? '#ffd36b' : '#c3ccff';
+    if (e > 0.02) { ctx.beginPath(); rr(ctx, sun ? bx : bx + bw * (1 - e), by, bw * e, 8, 4); ctx.fill(); }
+    // collected
+    const total = items.filter(it => it.kind === h.kind).length;
+    ctx.font = '800 13px Nunito, system-ui, sans-serif'; ctx.textBaseline = 'middle';
+    const tx = sun ? bx + bw + 10 : bx - 10;
+    ctx.textAlign = sun ? 'left' : 'right';
+    if (total) {
+      const ex = sun ? tx + 6 : tx - 6;
+      ctx.fillStyle = sun ? '#ffe07a' : '#e6eaff';
+      starPath(ctx, ex, iy, sun ? 4 : 5, 6, sun ? 2 : 2.8, 0); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.fillText(`${h.collected}/${total}`, sun ? ex + 9 : ex - 9, iy + 1);
+    }
+    // ability
+    if (lvl.ability) {
+      const ax = sun ? x + w - 15 : x + 15;
+      ctx.fillStyle = 'rgba(255,255,255,.12)'; ctx.beginPath(); ctx.arc(ax, iy, 9, 0, 7); ctx.fill();
+      const k = 1 - h.cd / AB_CD;
+      ctx.fillStyle = h.cd <= 0 ? (sun ? '#ffd36b' : '#a493ff') : 'rgba(255,255,255,.35)';
+      ctx.beginPath(); ctx.moveTo(ax, iy); ctx.arc(ax, iy, 9, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * k); ctx.closePath(); ctx.fill();
+      if (h.cd <= 0) { ctx.fillStyle = sun ? '#7a3b00' : '#fff'; ctx.font = '900 10px Nunito, system-ui'; ctx.textAlign = 'center'; ctx.fillText('✦', ax, iy + 1); }
+    }
+  });
+  // day/night dial
+  if (lvl.cycle) {
+    const { day, night } = lvl.cycle, P = day + night, p = time % P, isDay = p < day;
+    const left = isDay ? day - p : P - p, frac = isDay ? p / day : (p - day) / night;
+    const x = W / 2, y = 60, warn = left < 1.5 && state === 'play';
+    ctx.fillStyle = 'rgba(20,18,50,.55)'; ctx.beginPath(); ctx.arc(x, y, 17, 0, 7); ctx.fill();
+    ctx.strokeStyle = warn && Math.sin(animT * 18) > 0 ? '#ff8f8f' : isDay ? '#ffd36b' : '#b7c1ff';
+    ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(x, y, 15, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - frac)); ctx.stroke();
+    if (isDay) { ctx.fillStyle = '#ffcf5a'; ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill(); }
+    else { ctx.fillStyle = '#e6eaff'; ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill(); ctx.fillStyle = '#2b2a5e'; ctx.beginPath(); ctx.arc(x + 3.5, y - 2.5, 6, 0, 7); ctx.fill(); }
+  }
+}
+
+/* ================= menu background ================= */
+function renderMenuBg() {
+  ctx.save();
+  ctx.beginPath(); rr(ctx, 0, 0, W, H, 14); ctx.clip();
+  const gr = ctx.createLinearGradient(0, 0, W, 0);
+  gr.addColorStop(0, mix(DAY, DAY, 0)); gr.addColorStop(0.42, mix(DAY, NIGHT, 0.15)); gr.addColorStop(0.58, mix(NIGHT, DAY, 0.15)); gr.addColorStop(1, mix(NIGHT, NIGHT, 0));
+  ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+  for (let i = 0; i < 50; i++) {
+    const x = W * 0.55 + ((i * 97) % 430), y = (i * 53) % H, tw = 0.5 + 0.5 * Math.sin(animT * 2 + i);
+    ctx.fillStyle = `rgba(235,240,255,${0.2 + 0.6 * tw})`; ctx.beginPath(); ctx.arc(x, y, 1 + (i % 3) * 0.5, 0, 7); ctx.fill();
+  }
+  glow(ctx, W * 0.25, H * 0.5, 160, 'rgba(255,220,130,A)', 0.5);
+  glow(ctx, W * 0.75, H * 0.5, 160, 'rgba(170,185,255,A)', 0.35);
+  ctx.restore();
+}
+
+/* ================= loop ================= */
+let last = performance.now(), accum = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  animT += dt;
+  if (lvl && state !== 'menu') { accum += dt; while (accum >= STEP) { step(STEP); accum -= STEP; } }
+  else accum = 0;
+  render(dt);
+  requestAnimationFrame(frame);
+}
+
+// test hook
+window.__sunmoon = { load, get state() { return state; }, get heroes() { return heroes; }, get items() { return items; }, lightAt: (x, y) => lightAt(x, y), LEVELS };
+
+setTouch(isTouch);
+buildMenu();
+if (params.has('level')) { const n = Math.max(1, Math.min(LEVELS.length, +params.get('level') || 1)); save.unlocked = Math.max(save.unlocked, n); load(n - 1); }
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
